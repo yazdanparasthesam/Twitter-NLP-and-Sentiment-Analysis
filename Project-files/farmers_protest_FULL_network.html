@@ -1,0 +1,453 @@
+<html>
+    <head>
+        <meta charset="utf-8">
+        
+            <script>function neighbourhoodHighlight(params) {
+  // console.log("in nieghbourhoodhighlight");
+  allNodes = nodes.get({ returnType: "Object" });
+  // originalNodes = JSON.parse(JSON.stringify(allNodes));
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    highlightActive = true;
+    var i, j;
+    var selectedNode = params.nodes[0];
+    var degrees = 2;
+
+    // mark all nodes as hard to read.
+    for (let nodeId in allNodes) {
+      // nodeColors[nodeId] = allNodes[nodeId].color;
+      allNodes[nodeId].color = "rgba(200,200,200,0.5)";
+      if (allNodes[nodeId].hiddenLabel === undefined) {
+        allNodes[nodeId].hiddenLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+    var connectedNodes = network.getConnectedNodes(selectedNode);
+    var allConnectedNodes = [];
+
+    // get the second degree nodes
+    for (i = 1; i < degrees; i++) {
+      for (j = 0; j < connectedNodes.length; j++) {
+        allConnectedNodes = allConnectedNodes.concat(
+          network.getConnectedNodes(connectedNodes[j])
+        );
+      }
+    }
+
+    // all second degree nodes get a different color and their label back
+    for (i = 0; i < allConnectedNodes.length; i++) {
+      // allNodes[allConnectedNodes[i]].color = "pink";
+      allNodes[allConnectedNodes[i]].color = "rgba(150,150,150,0.75)";
+      if (allNodes[allConnectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[allConnectedNodes[i]].label =
+          allNodes[allConnectedNodes[i]].hiddenLabel;
+        allNodes[allConnectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // all first degree nodes get their own color and their label back
+    for (i = 0; i < connectedNodes.length; i++) {
+      // allNodes[connectedNodes[i]].color = undefined;
+      allNodes[connectedNodes[i]].color = nodeColors[connectedNodes[i]];
+      if (allNodes[connectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[connectedNodes[i]].label =
+          allNodes[connectedNodes[i]].hiddenLabel;
+        allNodes[connectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // the main node gets its own color and its label back.
+    // allNodes[selectedNode].color = undefined;
+    allNodes[selectedNode].color = nodeColors[selectedNode];
+    if (allNodes[selectedNode].hiddenLabel !== undefined) {
+      allNodes[selectedNode].label = allNodes[selectedNode].hiddenLabel;
+      allNodes[selectedNode].hiddenLabel = undefined;
+    }
+  } else if (highlightActive === true) {
+    // console.log("highlightActive was true");
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      // allNodes[nodeId].color = "purple";
+      allNodes[nodeId].color = nodeColors[nodeId];
+      // delete allNodes[nodeId].color;
+      if (allNodes[nodeId].hiddenLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].hiddenLabel;
+        allNodes[nodeId].hiddenLabel = undefined;
+      }
+    }
+    highlightActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    // console.log("Nothing was selected");
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        // allNodes[nodeId].color = {};
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function filterHighlight(params) {
+  allNodes = nodes.get({ returnType: "Object" });
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    filterActive = true;
+    let selectedNodes = params.nodes;
+
+    // hiding all nodes and saving the label
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = true;
+      if (allNodes[nodeId].savedLabel === undefined) {
+        allNodes[nodeId].savedLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+
+    for (let i=0; i < selectedNodes.length; i++) {
+      allNodes[selectedNodes[i]].hidden = false;
+      if (allNodes[selectedNodes[i]].savedLabel !== undefined) {
+        allNodes[selectedNodes[i]].label = allNodes[selectedNodes[i]].savedLabel;
+        allNodes[selectedNodes[i]].savedLabel = undefined;
+      }
+    }
+
+  } else if (filterActive === true) {
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = false;
+      if (allNodes[nodeId].savedLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].savedLabel;
+        allNodes[nodeId].savedLabel = undefined;
+      }
+    }
+    filterActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function selectNode(nodes) {
+  network.selectNodes(nodes);
+  neighbourhoodHighlight({ nodes: nodes });
+  return nodes;
+}
+
+function selectNodes(nodes) {
+  network.selectNodes(nodes);
+  filterHighlight({nodes: nodes});
+  return nodes;
+}
+
+function highlightFilter(filter) {
+  let selectedNodes = []
+  let selectedProp = filter['property']
+  if (filter['item'] === 'node') {
+    let allNodes = nodes.get({ returnType: "Object" });
+    for (let nodeId in allNodes) {
+      if (allNodes[nodeId][selectedProp] && filter['value'].includes((allNodes[nodeId][selectedProp]).toString())) {
+        selectedNodes.push(nodeId)
+      }
+    }
+  }
+  else if (filter['item'] === 'edge'){
+    let allEdges = edges.get({returnType: 'object'});
+    // check if the selected property exists for selected edge and select the nodes connected to the edge
+    for (let edge in allEdges) {
+      if (allEdges[edge][selectedProp] && filter['value'].includes((allEdges[edge][selectedProp]).toString())) {
+        selectedNodes.push(allEdges[edge]['from'])
+        selectedNodes.push(allEdges[edge]['to'])
+      }
+    }
+  }
+  selectNodes(selectedNodes)
+}</script>
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/dist/vis-network.min.css" integrity="sha512-WgxfT5LWjfszlPHXRmBWHkV2eceiWTOBvrKCNbdgDYTHrT2AeLCGbF4sZlZw3UMN3WtL0tGUoIAKsu8mllg/XA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/vis-network.min.js" integrity="sha512-LnvoEWDFrqGHlHmDD2101OrLcbsfkrzoSpvtSQtxK3RMnRV0eOkhhBN2dXHKRrUU8p2DGRTk35n4O8nWSVe1mQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+            
+            
+            
+            
+            
+
+        
+<center>
+<h1></h1>
+</center>
+
+<!-- <link rel="stylesheet" href="../node_modules/vis/dist/vis.min.css" type="text/css" />
+<script type="text/javascript" src="../node_modules/vis/dist/vis.js"> </script>-->
+        <link
+          href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/css/bootstrap.min.css"
+          rel="stylesheet"
+          integrity="sha384-eOJMYsd53ii+scO/bJGFsiCZc+5NDVN2yr8+0RDqr0Ql0h+rP48ckxlpbzKgwra6"
+          crossorigin="anonymous"
+        />
+        <script
+          src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/js/bootstrap.bundle.min.js"
+          integrity="sha384-JEW9xMcG8R+pH31jmWH6WWP0WintQrMb4s7ZOdauHnUtxwoG2vI5DkLtS3qm9Ekf"
+          crossorigin="anonymous"
+        ></script>
+
+
+        <center>
+          <h1></h1>
+        </center>
+        <style type="text/css">
+
+             #mynetwork {
+                 width: 100%;
+                 height: 800px;
+                 background-color: #222222;
+                 border: 1px solid lightgray;
+                 position: relative;
+                 float: left;
+             }
+
+             
+             #loadingBar {
+                 position:absolute;
+                 top:0px;
+                 left:0px;
+                 width: 100%;
+                 height: 800px;
+                 background-color:rgba(200,200,200,0.8);
+                 -webkit-transition: all 0.5s ease;
+                 -moz-transition: all 0.5s ease;
+                 -ms-transition: all 0.5s ease;
+                 -o-transition: all 0.5s ease;
+                 transition: all 0.5s ease;
+                 opacity:1;
+             }
+
+             #bar {
+                 position:absolute;
+                 top:0px;
+                 left:0px;
+                 width:20px;
+                 height:20px;
+                 margin:auto auto auto auto;
+                 border-radius:11px;
+                 border:2px solid rgba(30,30,30,0.05);
+                 background: rgb(0, 173, 246); /* Old browsers */
+                 box-shadow: 2px 0px 4px rgba(0,0,0,0.4);
+             }
+
+             #border {
+                 position:absolute;
+                 top:10px;
+                 left:10px;
+                 width:500px;
+                 height:23px;
+                 margin:auto auto auto auto;
+                 box-shadow: 0px 0px 4px rgba(0,0,0,0.2);
+                 border-radius:10px;
+             }
+
+             #text {
+                 position:absolute;
+                 top:8px;
+                 left:530px;
+                 width:30px;
+                 height:50px;
+                 margin:auto auto auto auto;
+                 font-size:22px;
+                 color: #000000;
+             }
+
+             div.outerBorder {
+                 position:relative;
+                 top:400px;
+                 width:600px;
+                 height:44px;
+                 margin:auto auto auto auto;
+                 border:8px solid rgba(0,0,0,0.1);
+                 background: rgb(252,252,252); /* Old browsers */
+                 background: -moz-linear-gradient(top,  rgba(252,252,252,1) 0%, rgba(237,237,237,1) 100%); /* FF3.6+ */
+                 background: -webkit-gradient(linear, left top, left bottom, color-stop(0%,rgba(252,252,252,1)), color-stop(100%,rgba(237,237,237,1))); /* Chrome,Safari4+ */
+                 background: -webkit-linear-gradient(top,  rgba(252,252,252,1) 0%,rgba(237,237,237,1) 100%); /* Chrome10+,Safari5.1+ */
+                 background: -o-linear-gradient(top,  rgba(252,252,252,1) 0%,rgba(237,237,237,1) 100%); /* Opera 11.10+ */
+                 background: -ms-linear-gradient(top,  rgba(252,252,252,1) 0%,rgba(237,237,237,1) 100%); /* IE10+ */
+                 background: linear-gradient(to bottom,  rgba(252,252,252,1) 0%,rgba(237,237,237,1) 100%); /* W3C */
+                 filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#fcfcfc', endColorstr='#ededed',GradientType=0 ); /* IE6-9 */
+                 border-radius:72px;
+                 box-shadow: 0px 0px 10px rgba(0,0,0,0.2);
+             }
+             
+
+             
+
+             
+        </style>
+    </head>
+
+
+    <body>
+        <div class="card" style="width: 100%">
+            
+            
+            <div id="mynetwork" class="card-body"></div>
+        </div>
+
+        
+            <div id="loadingBar">
+              <div class="outerBorder">
+                <div id="text">0%</div>
+                <div id="border">
+                  <div id="bar"></div>
+                </div>
+              </div>
+            </div>
+        
+        
+
+        <script type="text/javascript">
+
+              // initialize global variables.
+              var edges;
+              var nodes;
+              var allNodes;
+              var allEdges;
+              var nodeColors;
+              var originalNodes;
+              var network;
+              var container;
+              var options, data;
+              var filter = {
+                  item : '',
+                  property : '',
+                  value : []
+              };
+
+              
+
+              
+
+              // This method is responsible for drawing the graph, returns the drawn network
+              function drawGraph() {
+                  var container = document.getElementById('mynetwork');
+
+                  
+
+                  // parsing and collecting nodes and edges from the python
+                  nodes = new vis.DataSet([{"font": {"color": "white"}, "group": 0, "id": "nan", "label": "nan", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 0, "id": "KoonerpreetVlog", "label": "KoonerpreetVlog", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 1, "id": "Adivasi_bot_", "label": "Adivasi_bot_", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 1, "id": "gramasevasangha", "label": "gramasevasangha", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 2, "id": "ish_kayy", "label": "ish_kayy", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 2, "id": "Tractor2twitr", "label": "Tractor2twitr", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 2, "id": "sarkamalc", "label": "sarkamalc", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 3, "id": "AUnicorn75", "label": "AUnicorn75", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 3, "id": "PARInetwork", "label": "PARInetwork", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 4, "id": "AAPKrishnaYadav", "label": "AAPKrishnaYadav", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 4, "id": "NavJammu", "label": "NavJammu", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 5, "id": "singamshanmuga", "label": "singamshanmuga", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 5, "id": "ClaudiaWebbe", "label": "ClaudiaWebbe", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 0, "id": "mahesh01344", "label": "mahesh01344", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 3, "id": "shivangi441", "label": "shivangi441", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 6, "id": "KyaniTeamWA", "label": "KyaniTeamWA", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 6, "id": "_roohi", "label": "_roohi", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 7, "id": "sahilkhurana09", "label": "sahilkhurana09", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 7, "id": "dhaval241086", "label": "dhaval241086", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 7, "id": "bk_chudasama", "label": "bk_chudasama", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 8, "id": "LIST4AIRDROP", "label": "LIST4AIRDROP", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 8, "id": "bej_2019", "label": "bej_2019", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 2, "id": "KisaanSm", "label": "KisaanSm", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 2, "id": "jagjitvaheguru", "label": "jagjitvaheguru", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 8, "id": "SIDistan", "label": "SIDistan", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 2, "id": "amaanbali", "label": "amaanbali", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 2, "id": "GurratanSingh", "label": "GurratanSingh", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 0, "id": "rssurjewala", "label": "rssurjewala", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 2, "id": "GurinderC", "label": "GurinderC", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 2, "id": "yourlawyerkomal", "label": "yourlawyerkomal", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 2, "id": "RaviSinghKA", "label": "RaviSinghKA", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 2, "id": "jindisinghka", "label": "jindisinghka", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 9, "id": "tweetSAMRAT", "label": "tweetSAMRAT", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 9, "id": "KumarRaoNYC", "label": "KumarRaoNYC", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 0, "id": "LaylaMoran", "label": "LaylaMoran", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 0, "id": "uflsofficial", "label": "uflsofficial", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 2, "id": "flexsingh_", "label": "flexsingh_", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 10, "id": "CroydonLibDems", "label": "CroydonLibDems", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 10, "id": "LibDems", "label": "LibDems", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 0, "id": "grewal01sharry", "label": "grewal01sharry", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 11, "id": "shriparv", "label": "shriparv", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 11, "id": "noconversion", "label": "noconversion", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 8, "id": "NeetaParmar13", "label": "NeetaParmar13", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 0, "id": "modhaliwal", "label": "modhaliwal", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 8, "id": "jaykayzone", "label": "jaykayzone", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 12, "id": "CyberAnonymous", "label": "CyberAnonymous", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 12, "id": "TOIJaipurNews", "label": "TOIJaipurNews", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 0, "id": "elzaphan10", "label": "elzaphan10", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 13, "id": "UmarKamran96", "label": "UmarKamran96", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 13, "id": "ETribuneTech", "label": "ETribuneTech", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 3, "id": "MankamalSingh", "label": "MankamalSingh", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 14, "id": "Sarb28", "label": "Sarb28", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 14, "id": "TheKaranMenon", "label": "TheKaranMenon", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 16, "id": "renewablepower5", "label": "renewablepower5", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 16, "id": "rihanna", "label": "rihanna", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 17, "id": "ITab29", "label": "ITab29", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 17, "id": "smartrandhawa", "label": "smartrandhawa", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 0, "id": "farmers_stand", "label": "farmers_stand", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 7, "id": "BobBlackman", "label": "BobBlackman", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 16, "id": "jyotigoyal08", "label": "jyotigoyal08", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 18, "id": "gurvinder209", "label": "gurvinder209", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 18, "id": "timesofindia", "label": "timesofindia", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 19, "id": "DickandSharon", "label": "DickandSharon", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 19, "id": "shaunking", "label": "shaunking", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 0, "id": "mehdirhasan", "label": "mehdirhasan", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 0, "id": "GretaThunberg", "label": "GretaThunberg", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 18, "id": "nytimes", "label": "nytimes", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 0, "id": "Travis4Climate", "label": "Travis4Climate", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 20, "id": "HamzaNaeemPTI", "label": "HamzaNaeemPTI", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 20, "id": "sayedzbukhari", "label": "sayedzbukhari", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 0, "id": "vikasbha", "label": "vikasbha", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 16, "id": "vishwa4tdp", "label": "vishwa4tdp", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 16, "id": "jimmurphySF", "label": "jimmurphySF", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 21, "id": "dkbyond", "label": "dkbyond", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 21, "id": "TheZaiduLeaks", "label": "TheZaiduLeaks", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 18, "id": "TeamJuJu", "label": "TeamJuJu", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 18, "id": "kylekuzma", "label": "kylekuzma", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 16, "id": "arulprk", "label": "arulprk", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 22, "id": "Shashwati", "label": "Shashwati", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 22, "id": "TheQuint", "label": "TheQuint", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 22, "id": "HateBuster1", "label": "HateBuster1", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 0, "id": "soutikBBC", "label": "soutikBBC", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 23, "id": "somitsrivastav", "label": "somitsrivastav", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 23, "id": "TheHinduCinema", "label": "TheHinduCinema", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 8, "id": "queendeepika4", "label": "queendeepika4", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 21, "id": "BekaarAaadmi", "label": "BekaarAaadmi", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 21, "id": "miakhalifa", "label": "miakhalifa", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 18, "id": "TheTweetOfGod", "label": "TheTweetOfGod", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 18, "id": "SukheetJataana", "label": "SukheetJataana", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 18, "id": "RepJimCosta", "label": "RepJimCosta", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 18, "id": "Duhmun", "label": "Duhmun", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 18, "id": "SpecialKBrook", "label": "SpecialKBrook", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 18, "id": "Lilly", "label": "Lilly", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 18, "id": "taytaeshoe", "label": "taytaeshoe", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 18, "id": "hrw", "label": "hrw", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 18, "id": "LLakhdhir", "label": "LLakhdhir", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 18, "id": "sikhexpo", "label": "sikhexpo", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 18, "id": "ErGrpreetSingh", "label": "ErGrpreetSingh", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 0, "id": "PeterStefanovi2", "label": "PeterStefanovi2", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 24, "id": "AmoghIN", "label": "AmoghIN", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 24, "id": "blsanthosh", "label": "blsanthosh", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 0, "id": "ANI", "label": "ANI", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 3, "id": "pawanrai1313", "label": "pawanrai1313", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 0, "id": "Sikh24", "label": "Sikh24", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 3, "id": "shikhamakan", "label": "shikhamakan", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 0, "id": "1995MODASSIR", "label": "1995MODASSIR", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 25, "id": "indernagra", "label": "indernagra", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 25, "id": "PallyB", "label": "PallyB", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 7, "id": "MrsGandhi", "label": "MrsGandhi", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 26, "id": "twcctz500", "label": "twcctz500", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 26, "id": "tannu_ms", "label": "tannu_ms", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 27, "id": "StandForFarmer", "label": "StandForFarmer", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 27, "id": "atwal1_rosey", "label": "atwal1_rosey", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 27, "id": "nenagill2", "label": "nenagill2", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 27, "id": "doc_Aujla", "label": "doc_Aujla", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 27, "id": "UrJagjeet", "label": "UrJagjeet", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 27, "id": "J4SHANBAINS", "label": "J4SHANBAINS", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 27, "id": "creativeanmol", "label": "creativeanmol", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 27, "id": "Mehak20sidhu", "label": "Mehak20sidhu", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 0, "id": "aishkapoor", "label": "aishkapoor", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 0, "id": "yogrishiramdev", "label": "yogrishiramdev", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 7, "id": "IamPolSol", "label": "IamPolSol", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 28, "id": "vnmheart", "label": "vnmheart", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 28, "id": "moneycontrolcom", "label": "moneycontrolcom", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 0, "id": "Supriya23bh", "label": "Supriya23bh", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 0, "id": "ShekharGupta", "label": "ShekharGupta", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 3, "id": "PaddyVaidy", "label": "PaddyVaidy", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 0, "id": "rahulkanwal", "label": "rahulkanwal", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 0, "id": "IndiaToday", "label": "IndiaToday", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 18, "id": "DesiWestTeam", "label": "DesiWestTeam", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 18, "id": "TrishaKArora", "label": "TrishaKArora", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 0, "id": "diljitdosanjh", "label": "diljitdosanjh", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 7, "id": "go4avinash", "label": "go4avinash", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 0, "id": "gulf_news", "label": "gulf_news", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 16, "id": "GurjindErBarana", "label": "GurjindErBarana", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 16, "id": "ndtv", "label": "ndtv", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 3, "id": "PSainath_org", "label": "PSainath_org", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 16, "id": "EqualityLabs", "label": "EqualityLabs", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 29, "id": "Jaskirat_20", "label": "Jaskirat_20", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 29, "id": "GippyGrewal", "label": "GippyGrewal", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 3, "id": "rajitr", "label": "rajitr", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 30, "id": "CUTSCCIER", "label": "CUTSCCIER", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 30, "id": "Psm_cuts", "label": "Psm_cuts", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 30, "id": "cutscitee", "label": "cutscitee", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 0, "id": "rohitvgupta", "label": "rohitvgupta", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 31, "id": "AlecSocial", "label": "AlecSocial", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 31, "id": "TheTradingInst1", "label": "TheTradingInst1", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 16, "id": "dailyindia", "label": "dailyindia", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 3, "id": "the_Ghadar", "label": "the_Ghadar", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 3, "id": "NationalFedera4", "label": "NationalFedera4", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 3, "id": "kavithazahir", "label": "kavithazahir", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 7, "id": "vivekagnihotri", "label": "vivekagnihotri", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 3, "id": "NehaAgarwala156", "label": "NehaAgarwala156", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 7, "id": "Lala_The_Don", "label": "Lala_The_Don", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 18, "id": "khalsaaid_india", "label": "khalsaaid_india", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 0, "id": "NYCMayor", "label": "NYCMayor", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 2, "id": "Devinder_Sharma", "label": "Devinder_Sharma", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 0, "id": "bugla777_", "label": "bugla777_", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 0, "id": "amarsran", "label": "amarsran", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 0, "id": "mytentaran", "label": "mytentaran", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 0, "id": "yamraj9", "label": "yamraj9", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 32, "id": "bankingwithbabu", "label": "bankingwithbabu", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 32, "id": "kkuruganti", "label": "kkuruganti", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 32, "id": "Zulfi_ameer", "label": "Zulfi_ameer", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 16, "id": "airnewsalerts", "label": "airnewsalerts", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 32, "id": "arjun84298834", "label": "arjun84298834", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 0, "id": "micky_cow", "label": "micky_cow", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 2, "id": "harjapsran2", "label": "harjapsran2", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 19, "id": "vijayprashad", "label": "vijayprashad", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 33, "id": "hi_meWHY_ME", "label": "hi_meWHY_ME", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 33, "id": "rmnkhosatoor", "label": "rmnkhosatoor", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 32, "id": "barui_raja", "label": "barui_raja", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 15, "id": "trishaburgess", "label": "trishaburgess", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 15, "id": "execule", "label": "execule", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 8, "id": "AsmFar07", "label": "AsmFar07", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 32, "id": "RamaDhanyaHari", "label": "RamaDhanyaHari", "shape": "dot", "size": 10}]);
+                  edges = new vis.DataSet([{"alpha": 0.1, "color": "#444444", "from": "nan", "to": "KoonerpreetVlog"}, {"alpha": 0.1, "color": "#444444", "from": "nan", "to": "mahesh01344"}, {"alpha": 0.1, "color": "#444444", "from": "nan", "to": "rssurjewala"}, {"alpha": 0.1, "color": "#444444", "from": "nan", "to": "LaylaMoran"}, {"alpha": 0.1, "color": "#444444", "from": "nan", "to": "uflsofficial"}, {"alpha": 0.1, "color": "#444444", "from": "nan", "to": "grewal01sharry"}, {"alpha": 0.1, "color": "#444444", "from": "nan", "to": "modhaliwal"}, {"alpha": 0.1, "color": "#444444", "from": "nan", "to": "elzaphan10"}, {"alpha": 0.1, "color": "#444444", "from": "nan", "to": "farmers_stand"}, {"alpha": 0.1, "color": "#444444", "from": "nan", "to": "mehdirhasan"}, {"alpha": 0.1, "color": "#444444", "from": "nan", "to": "GretaThunberg"}, {"alpha": 0.1, "color": "#444444", "from": "nan", "to": "vikasbha"}, {"alpha": 0.1, "color": "#444444", "from": "nan", "to": "soutikBBC"}, {"alpha": 0.1, "color": "#444444", "from": "nan", "to": "rihanna"}, {"alpha": 0.1, "color": "#444444", "from": "nan", "to": "PeterStefanovi2"}, {"alpha": 0.1, "color": "#444444", "from": "nan", "to": "ANI"}, {"alpha": 0.1, "color": "#444444", "from": "nan", "to": "Sikh24"}, {"alpha": 0.1, "color": "#444444", "from": "nan", "to": "1995MODASSIR"}, {"alpha": 0.1, "color": "#444444", "from": "nan", "to": "aishkapoor"}, {"alpha": 0.1, "color": "#444444", "from": "nan", "to": "yogrishiramdev"}, {"alpha": 0.1, "color": "#444444", "from": "nan", "to": "Supriya23bh"}, {"alpha": 0.1, "color": "#444444", "from": "nan", "to": "ShekharGupta"}, {"alpha": 0.1, "color": "#444444", "from": "nan", "to": "rahulkanwal"}, {"alpha": 0.1, "color": "#444444", "from": "nan", "to": "IndiaToday"}, {"alpha": 0.1, "color": "#444444", "from": "nan", "to": "MankamalSingh"}, {"alpha": 0.1, "color": "#444444", "from": "nan", "to": "diljitdosanjh"}, {"alpha": 0.1, "color": "#444444", "from": "nan", "to": "gulf_news"}, {"alpha": 0.1, "color": "#444444", "from": "nan", "to": "rohitvgupta"}, {"alpha": 0.1, "color": "#444444", "from": "nan", "to": "NYCMayor"}, {"alpha": 0.1, "color": "#444444", "from": "nan", "to": "bugla777_"}, {"alpha": 0.1, "color": "#444444", "from": "nan", "to": "amarsran"}, {"alpha": 0.1, "color": "#444444", "from": "nan", "to": "mytentaran"}, {"alpha": 0.1, "color": "#444444", "from": "nan", "to": "yamraj9"}, {"alpha": 0.1, "color": "#444444", "from": "nan", "to": "micky_cow"}, {"alpha": 0.1, "color": "#444444", "from": "Adivasi_bot_", "to": "gramasevasangha"}, {"alpha": 0.1, "color": "#444444", "from": "ish_kayy", "to": "Tractor2twitr"}, {"alpha": 0.1, "color": "#444444", "from": "ish_kayy", "to": "sarkamalc"}, {"alpha": 0.1, "color": "#444444", "from": "ish_kayy", "to": "KisaanSm"}, {"alpha": 0.1, "color": "#444444", "from": "ish_kayy", "to": "Devinder_Sharma"}, {"alpha": 0.1, "color": "#444444", "from": "AUnicorn75", "to": "PARInetwork"}, {"alpha": 0.1, "color": "#444444", "from": "AUnicorn75", "to": "shivangi441"}, {"alpha": 0.1, "color": "#444444", "from": "AUnicorn75", "to": "MankamalSingh"}, {"alpha": 0.1, "color": "#444444", "from": "AUnicorn75", "to": "pawanrai1313"}, {"alpha": 0.1, "color": "#444444", "from": "AUnicorn75", "to": "shikhamakan"}, {"alpha": 0.1, "color": "#444444", "from": "AUnicorn75", "to": "PaddyVaidy"}, {"alpha": 0.1, "color": "#444444", "from": "AUnicorn75", "to": "PSainath_org"}, {"alpha": 0.1, "color": "#444444", "from": "AUnicorn75", "to": "rajitr"}, {"alpha": 0.1, "color": "#444444", "from": "AUnicorn75", "to": "the_Ghadar"}, {"alpha": 0.1, "color": "#444444", "from": "AUnicorn75", "to": "NationalFedera4"}, {"alpha": 0.1, "color": "#444444", "from": "AUnicorn75", "to": "kavithazahir"}, {"alpha": 0.1, "color": "#444444", "from": "AUnicorn75", "to": "NehaAgarwala156"}, {"alpha": 0.1, "color": "#444444", "from": "AAPKrishnaYadav", "to": "NavJammu"}, {"alpha": 0.1, "color": "#444444", "from": "singamshanmuga", "to": "ClaudiaWebbe"}, {"alpha": 0.1, "color": "#444444", "from": "KyaniTeamWA", "to": "_roohi"}, {"alpha": 0.1, "color": "#444444", "from": "sahilkhurana09", "to": "dhaval241086"}, {"alpha": 0.1, "color": "#444444", "from": "sahilkhurana09", "to": "BobBlackman"}, {"alpha": 0.1, "color": "#444444", "from": "sahilkhurana09", "to": "MrsGandhi"}, {"alpha": 0.1, "color": "#444444", "from": "sahilkhurana09", "to": "IamPolSol"}, {"alpha": 0.1, "color": "#444444", "from": "sahilkhurana09", "to": "go4avinash"}, {"alpha": 0.1, "color": "#444444", "from": "sahilkhurana09", "to": "vivekagnihotri"}, {"alpha": 0.1, "color": "#444444", "from": "sahilkhurana09", "to": "Lala_The_Don"}, {"alpha": 0.1, "color": "#444444", "from": "dhaval241086", "to": "bk_chudasama"}, {"alpha": 0.1, "color": "#444444", "from": "bk_chudasama", "to": "BobBlackman"}, {"alpha": 0.1, "color": "#444444", "from": "bk_chudasama", "to": "MrsGandhi"}, {"alpha": 0.1, "color": "#444444", "from": "bk_chudasama", "to": "IamPolSol"}, {"alpha": 0.1, "color": "#444444", "from": "bk_chudasama", "to": "vivekagnihotri"}, {"alpha": 0.1, "color": "#444444", "from": "bk_chudasama", "to": "Lala_The_Don"}, {"alpha": 0.1, "color": "#444444", "from": "LIST4AIRDROP", "to": "bej_2019"}, {"alpha": 0.1, "color": "#444444", "from": "LIST4AIRDROP", "to": "SIDistan"}, {"alpha": 0.1, "color": "#444444", "from": "LIST4AIRDROP", "to": "NeetaParmar13"}, {"alpha": 0.1, "color": "#444444", "from": "LIST4AIRDROP", "to": "jaykayzone"}, {"alpha": 0.1, "color": "#444444", "from": "LIST4AIRDROP", "to": "queendeepika4"}, {"alpha": 0.1, "color": "#444444", "from": "LIST4AIRDROP", "to": "AsmFar07"}, {"alpha": 0.1, "color": "#444444", "from": "KisaanSm", "to": "jagjitvaheguru"}, {"alpha": 0.1, "color": "#444444", "from": "KisaanSm", "to": "amaanbali"}, {"alpha": 0.1, "color": "#444444", "from": "KisaanSm", "to": "GurratanSingh"}, {"alpha": 0.1, "color": "#444444", "from": "KisaanSm", "to": "GurinderC"}, {"alpha": 0.1, "color": "#444444", "from": "KisaanSm", "to": "yourlawyerkomal"}, {"alpha": 0.1, "color": "#444444", "from": "KisaanSm", "to": "RaviSinghKA"}, {"alpha": 0.1, "color": "#444444", "from": "KisaanSm", "to": "jindisinghka"}, {"alpha": 0.1, "color": "#444444", "from": "KisaanSm", "to": "flexsingh_"}, {"alpha": 0.1, "color": "#444444", "from": "KisaanSm", "to": "harjapsran2"}, {"alpha": 0.1, "color": "#444444", "from": "RaviSinghKA", "to": "gurvinder209"}, {"alpha": 0.1, "color": "#444444", "from": "tweetSAMRAT", "to": "KumarRaoNYC"}, {"alpha": 0.1, "color": "#444444", "from": "CroydonLibDems", "to": "LibDems"}, {"alpha": 0.1, "color": "#444444", "from": "shriparv", "to": "noconversion"}, {"alpha": 0.1, "color": "#444444", "from": "CyberAnonymous", "to": "TOIJaipurNews"}, {"alpha": 0.1, "color": "#444444", "from": "UmarKamran96", "to": "ETribuneTech"}, {"alpha": 0.1, "color": "#444444", "from": "Sarb28", "to": "TheKaranMenon"}, {"alpha": 0.1, "color": "#444444", "from": "renewablepower5", "to": "rihanna"}, {"alpha": 0.1, "color": "#444444", "from": "renewablepower5", "to": "jyotigoyal08"}, {"alpha": 0.1, "color": "#444444", "from": "renewablepower5", "to": "ndtv"}, {"alpha": 0.1, "color": "#444444", "from": "renewablepower5", "to": "airnewsalerts"}, {"alpha": 0.1, "color": "#444444", "from": "rihanna", "to": "vishwa4tdp"}, {"alpha": 0.1, "color": "#444444", "from": "rihanna", "to": "arulprk"}, {"alpha": 0.1, "color": "#444444", "from": "rihanna", "to": "gurvinder209"}, {"alpha": 0.1, "color": "#444444", "from": "ITab29", "to": "smartrandhawa"}, {"alpha": 0.1, "color": "#444444", "from": "gurvinder209", "to": "timesofindia"}, {"alpha": 0.1, "color": "#444444", "from": "gurvinder209", "to": "nytimes"}, {"alpha": 0.1, "color": "#444444", "from": "gurvinder209", "to": "TeamJuJu"}, {"alpha": 0.1, "color": "#444444", "from": "gurvinder209", "to": "kylekuzma"}, {"alpha": 0.1, "color": "#444444", "from": "gurvinder209", "to": "TheTweetOfGod"}, {"alpha": 0.1, "color": "#444444", "from": "gurvinder209", "to": "SukheetJataana"}, {"alpha": 0.1, "color": "#444444", "from": "gurvinder209", "to": "RepJimCosta"}, {"alpha": 0.1, "color": "#444444", "from": "gurvinder209", "to": "Duhmun"}, {"alpha": 0.1, "color": "#444444", "from": "gurvinder209", "to": "SpecialKBrook"}, {"alpha": 0.1, "color": "#444444", "from": "gurvinder209", "to": "Lilly"}, {"alpha": 0.1, "color": "#444444", "from": "gurvinder209", "to": "taytaeshoe"}, {"alpha": 0.1, "color": "#444444", "from": "gurvinder209", "to": "hrw"}, {"alpha": 0.1, "color": "#444444", "from": "gurvinder209", "to": "LLakhdhir"}, {"alpha": 0.1, "color": "#444444", "from": "gurvinder209", "to": "sikhexpo"}, {"alpha": 0.1, "color": "#444444", "from": "gurvinder209", "to": "ErGrpreetSingh"}, {"alpha": 0.1, "color": "#444444", "from": "DickandSharon", "to": "shaunking"}, {"alpha": 0.1, "color": "#444444", "from": "DickandSharon", "to": "vijayprashad"}, {"alpha": 0.1, "color": "#444444", "from": "GretaThunberg", "to": "Travis4Climate"}, {"alpha": 0.1, "color": "#444444", "from": "HamzaNaeemPTI", "to": "sayedzbukhari"}, {"alpha": 0.1, "color": "#444444", "from": "vishwa4tdp", "to": "jimmurphySF"}, {"alpha": 0.1, "color": "#444444", "from": "dkbyond", "to": "TheZaiduLeaks"}, {"alpha": 0.1, "color": "#444444", "from": "dkbyond", "to": "BekaarAaadmi"}, {"alpha": 0.1, "color": "#444444", "from": "dkbyond", "to": "miakhalifa"}, {"alpha": 0.1, "color": "#444444", "from": "arulprk", "to": "EqualityLabs"}, {"alpha": 0.1, "color": "#444444", "from": "Shashwati", "to": "TheQuint"}, {"alpha": 0.1, "color": "#444444", "from": "TheQuint", "to": "HateBuster1"}, {"alpha": 0.1, "color": "#444444", "from": "somitsrivastav", "to": "TheHinduCinema"}, {"alpha": 0.1, "color": "#444444", "from": "sikhexpo", "to": "DesiWestTeam"}, {"alpha": 0.1, "color": "#444444", "from": "AmoghIN", "to": "blsanthosh"}, {"alpha": 0.1, "color": "#444444", "from": "indernagra", "to": "PallyB"}, {"alpha": 0.1, "color": "#444444", "from": "twcctz500", "to": "tannu_ms"}, {"alpha": 0.1, "color": "#444444", "from": "StandForFarmer", "to": "atwal1_rosey"}, {"alpha": 0.1, "color": "#444444", "from": "StandForFarmer", "to": "nenagill2"}, {"alpha": 0.1, "color": "#444444", "from": "StandForFarmer", "to": "doc_Aujla"}, {"alpha": 0.1, "color": "#444444", "from": "StandForFarmer", "to": "UrJagjeet"}, {"alpha": 0.1, "color": "#444444", "from": "StandForFarmer", "to": "J4SHANBAINS"}, {"alpha": 0.1, "color": "#444444", "from": "StandForFarmer", "to": "creativeanmol"}, {"alpha": 0.1, "color": "#444444", "from": "StandForFarmer", "to": "Mehak20sidhu"}, {"alpha": 0.1, "color": "#444444", "from": "vnmheart", "to": "moneycontrolcom"}, {"alpha": 0.1, "color": "#444444", "from": "DesiWestTeam", "to": "TrishaKArora"}, {"alpha": 0.1, "color": "#444444", "from": "DesiWestTeam", "to": "khalsaaid_india"}, {"alpha": 0.1, "color": "#444444", "from": "GurjindErBarana", "to": "ndtv"}, {"alpha": 0.1, "color": "#444444", "from": "ndtv", "to": "dailyindia"}, {"alpha": 0.1, "color": "#444444", "from": "Jaskirat_20", "to": "GippyGrewal"}, {"alpha": 0.1, "color": "#444444", "from": "CUTSCCIER", "to": "Psm_cuts"}, {"alpha": 0.1, "color": "#444444", "from": "Psm_cuts", "to": "cutscitee"}, {"alpha": 0.1, "color": "#444444", "from": "AlecSocial", "to": "TheTradingInst1"}, {"alpha": 0.1, "color": "#444444", "from": "bankingwithbabu", "to": "kkuruganti"}, {"alpha": 0.1, "color": "#444444", "from": "bankingwithbabu", "to": "Zulfi_ameer"}, {"alpha": 0.1, "color": "#444444", "from": "bankingwithbabu", "to": "arjun84298834"}, {"alpha": 0.1, "color": "#444444", "from": "bankingwithbabu", "to": "barui_raja"}, {"alpha": 0.1, "color": "#444444", "from": "bankingwithbabu", "to": "RamaDhanyaHari"}, {"alpha": 0.1, "color": "#444444", "from": "hi_meWHY_ME", "to": "rmnkhosatoor"}, {"alpha": 0.1, "color": "#444444", "from": "trishaburgess", "to": "execule"}]);
+
+                  nodeColors = {};
+                  allNodes = nodes.get({ returnType: "Object" });
+                  for (nodeId in allNodes) {
+                    nodeColors[nodeId] = allNodes[nodeId].color;
+                  }
+                  allEdges = edges.get({ returnType: "Object" });
+                  // adding nodes and edges to the graph
+                  data = {nodes: nodes, edges: edges};
+
+                  var options = {
+    "configure": {
+        "enabled": false
+    },
+    "edges": {
+        "color": {
+            "inherit": true
+        },
+        "smooth": {
+            "enabled": true,
+            "type": "dynamic"
+        }
+    },
+    "interaction": {
+        "dragNodes": true,
+        "hideEdgesOnDrag": false,
+        "hideNodesOnDrag": false
+    },
+    "physics": {
+        "enabled": true,
+        "forceAtlas2Based": {
+            "avoidOverlap": 0,
+            "centralGravity": 0.01,
+            "damping": 0.4,
+            "gravitationalConstant": -50,
+            "springConstant": 0.08,
+            "springLength": 100
+        },
+        "solver": "forceAtlas2Based",
+        "stabilization": {
+            "enabled": true,
+            "fit": true,
+            "iterations": 1000,
+            "onlyDynamicEdges": false,
+            "updateInterval": 50
+        }
+    }
+};
+
+                  
+
+
+                  
+
+                  network = new vis.Network(container, data, options);
+
+                  
+
+                  
+
+                  
+
+
+                  
+                      network.on("stabilizationProgress", function(params) {
+                          document.getElementById('loadingBar').removeAttribute("style");
+                          var maxWidth = 496;
+                          var minWidth = 20;
+                          var widthFactor = params.iterations/params.total;
+                          var width = Math.max(minWidth,maxWidth * widthFactor);
+                          document.getElementById('bar').style.width = width + 'px';
+                          document.getElementById('text').innerHTML = Math.round(widthFactor*100) + '%';
+                      });
+                      network.once("stabilizationIterationsDone", function() {
+                          document.getElementById('text').innerHTML = '100%';
+                          document.getElementById('bar').style.width = '496px';
+                          document.getElementById('loadingBar').style.opacity = 0;
+                          // really clean the dom element
+                          setTimeout(function () {document.getElementById('loadingBar').style.display = 'none';}, 500);
+                      });
+                  
+
+                  return network;
+
+              }
+              drawGraph();
+        </script>
+    </body>
+</html>
